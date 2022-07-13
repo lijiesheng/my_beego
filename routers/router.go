@@ -1,8 +1,9 @@
 package routers
 
 import (
+	"github.com/astaxie/beego"
 	"zs403_mbook_copy/controllers"
-	beego "github.com/beego/beego/v2/server/web"
+
 )
 
 func init() {

@@ -1,17 +1,17 @@
 package test
 
 import (
+	"github.com/astaxie/beego"
 	"net/http"
 	"net/http/httptest"
-	"testing"
-	"runtime"
 	"path/filepath"
+	"runtime"
+	"testing"
 
-    "github.com/beego/beego/v2/core/logs"
+	"github.com/beego/beego/v2/core/logs"
 
 	_ "zs403_mbook_copy/routers"
 
-	beego "github.com/beego/beego/v2/server/web"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
