@@ -1,2 +1,7 @@
 package sysinit
 
+
+
+func sysinit()  {
+
+}
