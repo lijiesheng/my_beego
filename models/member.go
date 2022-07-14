@@ -1,6 +1,10 @@
 package models
 
-import "time"
+import (
+	"github.com/astaxie/beego/orm"
+	"strconv"
+	"time"
+)
 
 type Member struct {
 	MemberId int `orm:"pk;auto" json:"member_id"`
@@ -60,4 +64,14 @@ func (m *Member) TableName() string {
 
 func TNMembers() string {
 	return "md_members"
+}
+
+func (m *Member) Find(id int) (member *Member, err error) {
+	sql := "select * from md_members where member_id = " + strconv.Itoa(id)
+	newOrm := orm.NewOrm()
+	err = newOrm.Raw(sql).QueryRow(&member)
+	if err != nil && "<QuerySeter> no row found" != err.Error() {
+		return nil, err
+	}
+	return
 }

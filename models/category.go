@@ -1,5 +1,9 @@
 package models
 
+import (
+	"github.com/astaxie/beego/orm"
+	"strconv"
+)
 
 type Category struct {
 	Id     int
@@ -27,7 +31,16 @@ func (m *Category) TableName() string {
 
 // 获取所有分类
 // -1 获取全部分类
-func (m *Category) GetCates(pid , status int) (caets []Category, err error) {
-
-	return nil, nil
+func (m *Category) GetCates(pid , status int) (cates []Category, rows int64, err error) {
+	sql := "select id, pid, title, intro, icon,  cnt,sort, status from md_category where 1 = 1 "
+	if pid > -1 {
+		sql += " and pid = " + strconv.Itoa(pid)
+	}
+	if status == 0 || status == 1 {
+		sql += " and status = " + strconv.Itoa(status)
+	}
+	sql += " order by status desc , sort asc , title asc"
+	newOrm := orm.NewOrm()
+	rows, err = newOrm.Raw(sql).QueryRows(&cates)
+	return
 }

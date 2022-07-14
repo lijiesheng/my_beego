@@ -6,6 +6,7 @@ import (
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
 	_ "github.com/go-sql-driver/mysql"
+	_ "zs403_mbook_copy/models" // 初始化 models 的 init 函数
 )
 
 //调用方式
