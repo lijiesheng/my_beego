@@ -36,7 +36,7 @@ type Book struct {
 }
 
 func TNBook() string {
-	return "md_book"
+	return "md_books"
 }
 
 func (m *Book) TableName() string {

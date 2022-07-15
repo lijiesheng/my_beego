@@ -24,6 +24,7 @@ type CookieRemember struct {
 
 
 // 每个子类 Controller 共用方法调用前，都执行一下 Prepare 方法
+// 这是一个接口，调用
 func (c *BaseController) Prepare() {
 	c.Member = &models.Member{}
 	c.EnableAnonymous = false
