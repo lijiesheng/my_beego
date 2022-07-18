@@ -34,6 +34,10 @@ func dbinit(aliases ...string) {
 		// 参数3 : 是否打印输出调试信息 true 是； false 否
 		orm.RunSyncdb("default", false, isDev)
 	}
+
+	if isDev {
+		orm.Debug = isDev    // 输出 sql 语句 这个很重要
+	}
 }
 
 func registDatabase(alias string)  {

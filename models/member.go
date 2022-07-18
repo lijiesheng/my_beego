@@ -1,9 +1,11 @@
 package models
 
 import (
+	"errors"
 	"github.com/astaxie/beego/orm"
-	"strconv"
 	"time"
+	"zs403_mbook_copy/common"
+	"zs403_mbook_copy/utils"
 )
 
 type Member struct {
@@ -67,11 +69,40 @@ func TNMembers() string {
 }
 
 func (m *Member) Find(id int) (member *Member, err error) {
-	sql := "select * from md_members where member_id = " + strconv.Itoa(id)
-	newOrm := orm.NewOrm()
-	err = newOrm.Raw(sql).QueryRow(&member)
-	if err != nil && "<QuerySeter> no row found" != err.Error() {
-		return nil, err
+	m.MemberId = id
+	if err := orm.NewOrm().Read(m);err != nil {
+		return m, err
 	}
-	return
+	m.RoleName = common.Role(m.Role)
+	return m, err
+}
+
+func (m *Member) IsAdministrator () bool{
+	if m == nil || m.MemberId <= 0 {
+		return false
+	}
+	return m.Role == 0 || m.Role == 1
+}
+
+
+// cols 要更新的列 默认是全部
+func (m *Member) Update(cols ...string) error {
+	if m.Email == "" {
+		return errors.New("邮箱不能为空")
+	}
+	if _,err := orm.NewOrm().Update(m, cols...);err != nil {
+		return err
+	}
+	return nil
+}
+
+
+// 用户密码登录
+func (m *Member) Login(account, password string) (member *Member, err error) {
+	member := &Member{}
+	if err = orm.NewOrm().QueryTable(m.TableName()).Filter("account", account).
+		Filter("status" , 0).One(&member); err != nil {
+			return member, errors.New("用户不存在")
+	}
+	utils.BasePath
 }

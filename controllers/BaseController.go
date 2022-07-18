@@ -11,7 +11,7 @@ import (
 
 type BaseController struct {
 	beego.Controller
-	Member   *models.Member   // todo 为啥把用户放到这里
+	Member   *models.Member   // todo 为啥把用户放到这里 这里登录的时候回初始化用户的信息【比如是否是管理员】
 	EnableAnonymous bool      // 开启匿名访问
 	Option          map[string]string //全局设置
 }
@@ -57,13 +57,14 @@ func (c *BaseController) Prepare() {
 }
 
 // 设置用户登录信息
+// 获取是退出登录
 func (c *BaseController) SetMember(member models.Member) {
-	// todo 这里存在 member.MemberId <= 0 这种情况吗
+	// 退出登录
 	if member.MemberId <= 0 {
 		c.DelSession(common.SessionName)
 		c.DelSession("uid")
 		c.DestroySession()
-	} else {
+	} else {  // 登录
 		c.SetSession(common.SessionName, member)  // 将 member 记录到 session
 		c.SetSession("uid", member.MemberId)
 	}

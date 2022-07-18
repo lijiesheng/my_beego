@@ -50,14 +50,14 @@ func (m *Category) GetCates(pid , status int) (cates []Category, rows int64, err
 
 
 // 查询分类
-func (m *Category) Find(id int) (cate *Category, err error) {
+func (m *Category) Find(id int) (cate Category, err error) {
 
 	// todo 这里没有写 status
 	sql := "select id, pid, title, intro, icon,  cnt,sort, status from md_category where id = " + strconv.Itoa(id)
 	newOrm := orm.NewOrm()
 	err = newOrm.Raw(sql).QueryRow(&cate)
 	if err != nil && "<QuerySeter> no row found" != err.Error() {
-		return nil, err
+		return Category{}, err
 	}
 	return
 }
@@ -188,8 +188,6 @@ func CountCategory() {
 		}
 	}
 }
-
-
 
 
 

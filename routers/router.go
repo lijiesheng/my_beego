@@ -9,6 +9,10 @@ func init() {
     //beego.Router("/", &controllers.MainController{})
 	beego.Router("/", &controllers.HomeController{}, "get:Index")  // 获取 Category 所有信息
 	beego.Router("/2", &controllers.HomeController{}, "get:Index2") // 跳转到 "home/list.html"
-	beego.Router("/explore", &controllers.ExploreController, "")
-	//beego.Router("/explore", )
+	beego.Router("/explore", &controllers.ExploreController{}, "get:Index") // 获取某个分类下的所有读书
+
+	// 读书
+	beego.Router("/books/:key", &controllers.DocumentController{}, "*:Index")
+
+
 }
