@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"encoding/json"
 	"github.com/astaxie/beego"
 	"strings"
 	"zs403_mbook_copy/models"
@@ -25,24 +24,24 @@ func (c *DocumentController) Index() {
 
 }
 
-// 获取图书内容并判断权限
-func (c *DocumentController) getBookData (identify ,token string) *models.BookData {
-	book, err := (&models.Book{}).Select("identify", identify)
-	if err != nil {
-		beego.Error(err)
-		c.Abort("404")
-	}
-	// 私有文档
-	if book.PrivatelyOwned == 1 && !c.Member.IsAdministrator() {
-		isOk := false
-		if c.Member != nil {
-			(&models.Relationship{}).SelectRoleId(book.BookId, c.Member.MemberId)
-			if err == nil {
-				isOk = true
-			}
-		}
-
-
-	}
-}
+//// 获取图书内容并判断权限
+//func (c *DocumentController) getBookData (identify ,token string) *models.BookData {
+//	book, err := (&models.Book{}).Select("identify", identify)
+//	if err != nil {
+//		beego.Error(err)
+//		c.Abort("404")
+//	}
+//	// 私有文档
+//	if book.PrivatelyOwned == 1 && !c.Member.IsAdministrator() {
+//		isOk := false
+//		if c.Member != nil {
+//			(&models.Relationship{}).SelectRoleId(book.BookId, c.Member.MemberId)
+//			if err == nil {
+//				isOk = true
+//			}
+//		}
+//
+//
+//	}
+//}
 

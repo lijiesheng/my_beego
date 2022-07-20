@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
+	"github.com/astaxie/beego/orm"
 	"html/template"
 	"zs403_mbook_copy/common"
 	"zs403_mbook_copy/models"
@@ -45,13 +46,39 @@ func (c *BookController) Index() {
 	c.TplName = "book/index.html"
 }
 
-// 设置图片
-// todo 这个是啥请求
+// 设置图书页面
 func (c *BookController) Setting() {
+
 	key := c.Ctx.Input.Param(":key")
+
 	if key == "" {
 		c.Abort("404")
 	}
 
-	book, err := (&models.BookData{}).
+	book, err := (&models.BookData{}).SelectByIdentify(key, c.Member.MemberId)
+	if err != nil && err != orm.ErrNoRows {
+		c.Abort("404")
+	}
+
+	//需管理员以上权限
+	if book.RoleId != common.BookFounder && book.RoleId != common.BookAdmin {
+		c.Abort("404")
+	}
+
+	if book.PrivateToken != "" {
+		book.PrivateToken = c.BaseUrl() + beego.URLFor("DocumentController.Index", ":key", book.Identify, "token", book.PrivateToken)
+	}
+
+	//查询图书分类
+	if selectedCates, rows, _ := new(models.BookCategory).SelectByBookId(book.BookId); rows > 0 {
+		var maps = make(map[int]bool)
+		for _, cate := range selectedCates {
+			maps[cate.Id] = true
+		}
+		c.Data["Maps"] = maps
+	}
+
+	c.Data["Cates"], _, _ = (&models.Category{}).GetCates(-1, 1)
+	c.Data["Model"] = book
+	c.TplName = "book/setting.html"
 }

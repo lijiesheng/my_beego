@@ -45,3 +45,32 @@ func Role(role int) string {
 func DefaultAvatar() string {
 	return beego.AppConfig.DefaultString("avatar", "/static/images/headimgurl.jpg")
 }
+
+
+//图书关系
+const (
+	// 创始人.
+	BookFounder = 0
+	//管理
+	BookAdmin = 1
+	//编辑
+	BookEditor = 2
+	//普通用户
+	BookGeneral = 3
+)
+
+func BookRole(role int) string {
+	switch role {
+	case BookFounder:
+		return "创始人"
+	case BookAdmin:
+		return "管理员"
+	case BookEditor:
+		return "编辑"
+	case BookGeneral:
+		return "普通用户"
+	default:
+		return ""
+	}
+
+}

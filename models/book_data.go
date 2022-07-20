@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/astaxie/beego/orm"
 	"time"
+	"zs403_mbook_copy/common"
 )
 
 //拼接返回到接口的图书信息  todo 没有对应数据库的表
@@ -39,18 +40,19 @@ type BookData struct {
 	AuthorURL      string `json:"author_url"`
 }
 
-// 通过 memberId 和 identify [书的唯一标识]
 func (m *BookData) SelectByIdentify(identify string, memberId int) (result *BookData, err error) {
 	if identify == "" || memberId <= 0 {
 		return result, errors.New("Invalid parameter")
 	}
+
 	book := (&Book{})
 	o := orm.NewOrm()
 	err = o.QueryTable(TNBook()).Filter("identify", identify).One(book)
 	if err != nil {
 		return
 	}
-	// 查看权限
+
+	//查看权限
 	relationship := (&Relationship{})
 	err = o.QueryTable(TNRelationship()).Filter("book_id", book.BookId).Filter("role_id", 0).One(relationship)
 	if err != nil {
@@ -60,10 +62,20 @@ func (m *BookData) SelectByIdentify(identify string, memberId int) (result *Book
 	if err != nil {
 		return result, err
 	}
+
 	err = o.QueryTable(TNRelationship()).Filter("book_id", book.BookId).Filter("member_id", memberId).One(relationship)
 	if err != nil {
 		return
 	}
 
+	result = book.ToBookData()
+	result.CreateName = member.Account
+	result.MemberId = relationship.MemberId
+	result.RoleId = relationship.RoleId
+	result.RoleName = common.BookRole(result.RoleId)
+	result.RelationshipId = relationship.RelationshipId
 
+	document := (&Document{})
+	err = o.QueryTable(TNDocuments()).Filter("book_id", book.BookId).OrderBy("modify_time").One(document)
+	return
 }
