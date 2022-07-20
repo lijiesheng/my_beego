@@ -2,6 +2,7 @@ package models
 
 import (
 	"fmt"
+	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
 	"strconv"
 	"strings"
@@ -35,6 +36,7 @@ type Book struct {
 	CommentCount   int       `orm:"type(int)" json:"comment_count"`
 	Vcnt           int       `orm:"default(0)" json:"vcnt"`              //阅读次数
 	Score          int       `orm:"default(40)" json:"score"`            //评分
+	Collection     int       `orm:"column(star);default(0)" json:"star"` //收藏次数
 	CntScore       int       //评分人数
 	CntComment     int       //评论人数
 	Author         string    `orm:"size(50)"`                      //来源
@@ -45,6 +47,7 @@ func TNBook() string {
 	return "md_books"
 }
 
+// 这个是一个接口
 func (m *Book) TableName() string {
 	return TNBook()
 }
@@ -119,6 +122,42 @@ func (m *Book) GetBooksByIds(ids []int, fields ...string) (books []Book, err err
 	return
 }
 
+
+// 插入一本书
+// 插入 md_relationship 表  [role_id 默认是 0 ]
+//
+func (m *Book) Insert() (err error) {
+	if _, err = orm.NewOrm().Insert(m); err != nil {
+		return
+	}
+	relationship := Relationship{BookId: m.BookId, MemberId: m.MemberId, RoleId: 0}
+	if err = relationship.Insert(); err != nil {
+		return err
+	}
+	document := Document{BookId: m.BookId, DocumentName: "空白文档", Identify: "blank", MemberId: m.MemberId}
+	var id int64
+	if id, err = document.InsertOrUpdate(); err == nil {
+		documentstore := DocumentStore{DocumentId: int(id), Markdown: ""}
+		err = documentstore.InsertOrUpdate()
+	}
+	return err
+}
+
+
+// Update
+// cols 更改的字段
+func (m *Book) Update(cols ...string) (err error) {
+	bk := &Book{}
+	bk.BookId = m.BookId
+	o := orm.NewOrm()
+	if err = o.Read(bk); err != nil {
+		return err
+	}
+	_, err = o.Update(m, cols...)
+	return err
+}
+
+
 // cols 是返回的字段
 // cols 传入的是表中的字段
 func (m *Book) Select(filed string, value interface{}, cols ...string) (book *Book, err error) {
@@ -129,3 +168,71 @@ func (m *Book) Select(filed string, value interface{}, cols ...string) (book *Bo
 	}
 	return m, err
 }
+
+func (m *Book) SelectPage (pageIndex, pageSize , memberId int, PrivatelyOwned int) (books []*BookData, totalCount int, err error) {
+	o := orm.NewOrm()
+	sql1 := "select count(b.book_id) as total_count from " + TNBook() + " as b left join " +
+		TNRelationship() + " as r on b.book_id=r.book_id and r.member_id = ? where r.relationship_id > 0  and b.privately_owned=" + strconv.Itoa(PrivatelyOwned)
+
+	err = o.Raw(sql1, memberId).QueryRow(&totalCount)
+	if err != nil {
+		return
+	}
+	offset := (pageIndex - 1) * pageSize
+	sql2 := "select book.*,rel.member_id,rel.role_id,m.account as create_name from " + TNBook() + " as book" +
+		" left join " + TNRelationship() + " as rel on book.book_id=rel.book_id and rel.member_id = ?" +
+		" left join " + TNRelationship() + " as rel1 on book.book_id=rel1.book_id  and rel1.role_id=0" +
+		" left join " + TNMembers() + " as m on rel1.member_id=m.member_id " +
+		" where rel.relationship_id > 0 %v order by book.book_id desc limit " + fmt.Sprintf("%d,%d", offset, pageSize)
+	sql2 = fmt.Sprintf(sql2, " and book.privately_owned="+strconv.Itoa(PrivatelyOwned))
+	_, err = o.Raw(sql2, memberId).QueryRows(&books)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func (book *Book) ToBookData() (m *BookData) {
+	m = &BookData{}
+	m.BookId = book.BookId
+	m.BookName = book.BookName
+	m.Identify = book.Identify
+	m.OrderIndex = book.OrderIndex
+	m.Description = strings.Replace(book.Description, "\r\n", "<br/>", -1)
+	m.PrivatelyOwned = book.PrivatelyOwned
+	m.PrivateToken = book.PrivateToken
+	m.DocCount = book.DocCount
+	m.CommentCount = book.CommentCount
+	m.CreateTime = book.CreateTime
+	m.ModifyTime = book.ModifyTime
+	m.Cover = book.Cover
+	m.MemberId = book.MemberId
+	m.Status = book.Status
+	m.Editor = book.Editor
+	m.Vcnt = book.Vcnt
+	m.Collection = book.Collection
+	m.Score = book.Score
+	m.CntScore = book.CntScore
+	m.CntComment = book.CntComment
+	m.Author = book.Author
+	m.AuthorURL = book.AuthorURL
+	if book.Editor == "" {
+		m.Editor = "markdown"
+	}
+	return m
+}
+
+// 更新文档数量
+func (m *Book) RefreshDocumentCount(bookId int) {
+	o := orm.NewOrm()
+	docCount, err := o.QueryTable(TNDocuments()).Filter("book_id", bookId).Count()
+	if err == nil {
+	   bookTep := &Book{}
+	   bookTep.BookId = bookId
+	   bookTep.DocCount = int(docCount)
+	   o.Update(bookTep, "doc_count")  // 更新 doc_count 字段
+	} else {
+		beego.Error(err)
+	}
+}
+

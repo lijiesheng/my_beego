@@ -5,6 +5,15 @@ import "github.com/astaxie/beego"
 // session
 const SessionName = "__mbook_session__"
 
+//正则表达式
+const RegexpEmail = `^(\w)+(\.\w+)*@(\w)+((\.\w+)+)$`
+
+
+// 默认PageSize
+const PageSize = 20
+const RollPage = 4
+
+
 // 用户权限
 const (
 	// 超级管理员.
@@ -30,4 +39,9 @@ func Role(role int) string {
 	} else {
 		return ""
 	}
+}
+
+// 默认头像
+func DefaultAvatar() string {
+	return beego.AppConfig.DefaultString("avatar", "/static/images/headimgurl.jpg")
 }

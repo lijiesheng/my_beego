@@ -1,8 +1,12 @@
 package models
 
-import "time"
+import (
+	"errors"
+	"github.com/astaxie/beego/orm"
+	"time"
+)
 
-//拼接返回到接口的图书信息
+//拼接返回到接口的图书信息  todo 没有对应数据库的表
 type BookData struct {
 	BookId         int       `json:"book_id"`
 	BookName       string    `json:"book_name"`
@@ -35,3 +39,31 @@ type BookData struct {
 	AuthorURL      string `json:"author_url"`
 }
 
+// 通过 memberId 和 identify [书的唯一标识]
+func (m *BookData) SelectByIdentify(identify string, memberId int) (result *BookData, err error) {
+	if identify == "" || memberId <= 0 {
+		return result, errors.New("Invalid parameter")
+	}
+	book := (&Book{})
+	o := orm.NewOrm()
+	err = o.QueryTable(TNBook()).Filter("identify", identify).One(book)
+	if err != nil {
+		return
+	}
+	// 查看权限
+	relationship := (&Relationship{})
+	err = o.QueryTable(TNRelationship()).Filter("book_id", book.BookId).Filter("role_id", 0).One(relationship)
+	if err != nil {
+		return result, errors.New("Permission denied")
+	}
+	member, err := (&Member{}).Find(relationship.MemberId)
+	if err != nil {
+		return result, err
+	}
+	err = o.QueryTable(TNRelationship()).Filter("book_id", book.BookId).Filter("member_id", memberId).One(relationship)
+	if err != nil {
+		return
+	}
+
+
+}

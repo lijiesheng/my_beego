@@ -15,4 +15,10 @@ func init() {
 	beego.Router("/books/:key", &controllers.DocumentController{}, "*:Index")
 
 
+
+	//login
+	beego.Router("/login", &controllers.AcountController{}, "*:Login")   // 登录
+	beego.Router("/regist", &controllers.AcountController{}, "*:Regist")  // 注册
+	beego.Router("/logout", &controllers.AcountController{}, "*:Logout")  // 注册
+	beego.Router("/doregist", &controllers.AcountController{}, "post:DoRegist")  // 查表
 }

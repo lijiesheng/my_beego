@@ -153,3 +153,9 @@ func NewPaginations(rollPage, totalRows, listRows, currentPage int, urlPrefix st
 
 	return html1.HTML(`<ul class="pagination">` + htmlPage + `</ul>`)
 }
+
+
+//评分处理
+func ScoreFloat(score int) string {
+	return fmt.Sprintf("%1.1f", float32(score)/10.0)
+}

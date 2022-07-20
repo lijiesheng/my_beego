@@ -36,3 +36,6 @@ func TNScore() string {
 func (m *Score) TableName() string {
 	return TNScore()
 }
+
+
+

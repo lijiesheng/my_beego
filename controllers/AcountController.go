@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/utils/captcha"
+	"regexp"
 	"strings"
 	"time"
 	"zs403_mbook_copy/common"
@@ -15,12 +17,15 @@ type AcountController struct {
 	BaseController
 }
 
+var cpt *captcha.Captcha
+
 func init()  {
 	// 使用beego缓存系统存储验证码数据
 }
 
 
 // 注册
+// 需要传入的参数 返回给前端
 func (c *AcountController) Regist() {
 	var (
 		nickname string     // 昵称
@@ -42,19 +47,24 @@ func (c *AcountController) Regist() {
 	c.Data["Email"] = email
 	c.Data["Username"] = username
 	c.Data["Id"] = id
-	c.Data["RandomStr"] = time.Now().Unix()
+	c.Data["RandomStr"] = time.Now().Unix()   // 随机数
 
 	//存储标识，以标记是哪个用户，在完善用户信息的时候跟传递过来的auth和id进行校验
 	c.SetSession("auth", fmt.Sprintf("%v-%v", "email", id))  // todo 这个不明白
 	c.TplName = "account/bind.html"
 }
 
-// 登录
+// 返回一个登录页面
+// 获取 cookie 中的 remember 信息 【就是回写进去】
+// 如果是 post 请求【登录接口】
+// 1、校验用户名和密码
+// 2、更新上一次登录时间
+// 3、更新CookieRemember 存入到 cookie中
 func (c *AcountController) Login() {
 	var remember CookieRemember
 	// 验证 cookie
 	if cookie, ok := c.GetSecureCookie(common.AppKey(), "login"); ok {
-		if err := utils.Decode(cookie, &remember); err != nil {
+		if err := utils.Decode(cookie, &remember); err == nil {
 			if err = c.login(remember.MemberId); err == nil {
 				c.Redirect(beego.URLFor("HomeController.Index"), 302)
 				return
@@ -63,17 +73,88 @@ func (c *AcountController) Login() {
 	}
 	c.TplName = "account/login.html"
 
-	if c.Ctx.Input.IsPost() {  // 如果是 post 请求
+	if c.Ctx.Input.IsPost() {
 		account := c.GetString("account")
 		password := c.GetString("password")
 		member, err := (&models.Member{}).Login(account, password)
+		fmt.Println(err)
+		if err != nil {
+			c.JsonResult(1, "登录失败", nil)
+		}
+		member.LastLoginTime = time.Now()
+		member.Update()
+		c.SetMember(*member)
+
+
+		remember.MemberId = member.MemberId
+		remember.Account = member.Account
+		remember.Time = time.Now()
+		v, err := utils.Encode(remember)
+		if err == nil {
+			c.SetSecureCookie(common.AppKey(), "login", v, 24*3600*365)
+		}
+		c.JsonResult(0, "ok")
 	}
+
+	c.Data["RandomStr"] = time.Now().Unix()
+}
+
+
+// 注册
+// 用户注册后，会产生一条 member 数据
+// 将用户的信息 存入到 cookie 中
+func (c *AcountController) DoRegist() {
+	var err error
+	account := c.GetString("account")
+	nickname := strings.TrimSpace(c.GetString("nickname"))
+	password1 := c.GetString("password1")
+	password2 := c.GetString("password2")
+	email := c.GetString("email")
+
+	member := &models.Member{}
+	if password1 != password2 {
+		c.JsonResult(1, "登录密码与确认密码不一致")
+	}
+
+	if l := strings.Count(password1, ""); password1 == "" || l > 20 || l < 6 {
+		c.JsonResult(1, "密码必须在6-20个字符之间")
+	}
+
+	if ok, err := regexp.MatchString(common.RegexpEmail, email); !ok || err != nil || email == "" {
+		c.JsonResult(1, "邮箱格式错误")
+	}
+
+	if l := strings.Count(nickname, "") - 1; l < 2 || l > 20 {
+		c.JsonResult(1, "用户昵称限制在2-20个字符")
+	}
+
+	member.Account = account
+	member.Nickname = nickname
+	member.Password = password1
+	if account == "admin" || account == "administrator" {  // 特殊账号
+		member.Role = common.MemberSuperRole
+	} else {
+		member.Role = common.MemberGeneralRole
+	}
+	member.Avatar = common.DefaultAvatar()    // 头像
+	member.CreateAt = 0
+	member.Email = email
+	member.Status = 0
+	if err := member.Add(); err != nil {
+		beego.Error(err)
+		c.JsonResult(1, err.Error())
+	}
+	if err = c.login(member.MemberId); err != nil {
+		beego.Error(err)
+		c.JsonResult(1, err.Error())
+	}
+	c.JsonResult(0, "注册成功")
 }
 
 // 退出登录
 func (c *AcountController) Logout() {
-	c.SetMember(models.Member{})
-	c.SetSecureCookie(common.AppKey(), "login", "",-3600)
+	c.SetMember(models.Member{})   // 清空用户信息
+	c.SetSecureCookie(common.AppKey(), "login", "",-3600)  // cookie 设置过期
 	c.Redirect(beego.URLFor("AccountController.Login"), 302) // 跳转到登录页面
 }
 

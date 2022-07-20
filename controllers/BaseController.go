@@ -1,7 +1,10 @@
 package controllers
 
 import (
+	"compress/gzip"
+	"encoding/json"
 	"github.com/astaxie/beego"
+	"io"
 	"strings"
 	"time"
 	"zs403_mbook_copy/common"
@@ -80,4 +83,51 @@ func (c *BaseController) BaseUrl() string {
 		return c.Ctx.Input.Scheme() + "://" + host
 	}
 	return c.Ctx.Input.Scheme() + "://" + c.Ctx.Request.Host
+}
+
+
+// Ajax 接口返回 Json
+// todo 完全不懂了
+func (c *BaseController) JsonResult (errCode int, errMsg string, data ...interface{}) {
+	jsonData := make(map[string]interface{}, 3)
+	jsonData["errcode"] = errCode
+	jsonData["message"] = errMsg
+
+	if (len(data) > 0 && data[0] != nil) {
+		jsonData["data"] = data[0]
+	}
+
+	// map 转换为 json 的字节流
+	returnJSON, err := json.Marshal(jsonData)
+	if err != nil {
+		beego.Error(err)
+	}
+	c.Ctx.ResponseWriter.Header().Set("Content-Type", "application/json; charset=utf-8")
+	// 启用 gzip 压缩
+	if strings.Contains(strings.ToLower(c.Ctx.Request.Header.Get("Accept-Encoding")), "gzip") {
+		c.Ctx.ResponseWriter.Header().Set("Content-Encoding", "gzip")
+		w := gzip.NewWriter(c.Ctx.ResponseWriter)
+		defer w.Close()
+		w.Write(returnJSON)
+		w.Flush()
+	} else {
+		io.WriteString(c.Ctx.ResponseWriter, string(returnJSON))
+	}
+	c.StopRun()
+}
+
+// 关注或者取消关注
+func (c *BaseController) SetFollow() {
+	if c.Member.MemberId == 0 {
+		c.JsonResult(1, "请先登录")
+	}
+	uid , _:= c.GetInt(":uid")
+	if uid == c.Member.MemberId {
+		c.JsonResult(1, "不能关注自己")
+	}
+	cancel, _ := (&models.Fans{}).FollowOrCancel(uid, c.Member.MemberId)
+	if cancel {
+		c.JsonResult(0, "已成功取消关注")
+	}
+	c.JsonResult(0, "已成功关注")
 }
